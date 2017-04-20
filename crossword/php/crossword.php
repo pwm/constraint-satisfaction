@@ -19,10 +19,16 @@ function clearScreen(): void {
     echo "\033[H\033[J";
 }
 
-function displayTable(array $table, array $segments, array $words, array $segmentWordPairs, bool $inProgress = false): void {
-    static $c = 0;
+function displayTable(
+    array $table,
+    array $segments,
+    array $words,
+    array $segmentWordPairs,
+    bool $inProgress = false
+): void {
+    static $iterCount = 0;
     echo tableToString(fillTableWithWords($table, $segments, $words, $segmentWordPairs));
-    echo PHP_EOL . ($inProgress ? 'Iteration: ' . number_format(++$c) : '') . PHP_EOL;
+    echo PHP_EOL . ($inProgress ? 'Iteration: ' . number_format(++$iterCount) : '') . PHP_EOL;
     if ($inProgress) { echo "\033[" . (count($table) + 2) . 'A'; }
 }
 
@@ -48,8 +54,6 @@ function fillTableWithWords(array $table, array $segments, array $words, array $
     }
     return $table;
 }
-
-////////////////////////////////////////////////////////////////
 
 function extractSegmentsFromTable(array $table): array {
     $segments = [];
@@ -114,8 +118,15 @@ function getCross(string $segment1, string $segment2): ?array {
     return $cross;
 }
 
-function solve(array $segments, array $words, array $wordLengthsWordsMap, array $segmentsCrossesMap, array $segmentWordPairs, array $table = null): ?array {
-    if (count($segmentWordPairs) > 1 && rejectPosition($segments, $words, $segmentsCrossesMap, $segmentWordPairs)) { return null; }
+function solve(
+    array $segments,
+    array $words,
+    array $wordLengthsWordsMap,
+    array $segmentsCrossesMap,
+    array $segmentWordPairs,
+    array $table = null
+): ?array {
+    if (count($segmentWordPairs) > 1 && reject($segments, $words, $segmentsCrossesMap, $segmentWordPairs)) { return null; }
     if (count($segmentWordPairs) === count($segments)) { return $segmentWordPairs; }
 
     if ($table !== null) { displayTable($table, $segments, $words, $segmentWordPairs, true); }
@@ -132,15 +143,17 @@ function solve(array $segments, array $words, array $wordLengthsWordsMap, array 
     return null;
 }
 
-function rejectPosition(array $segments, array $words, array $segmentsCrossesMap, array $segmentWordPairs): bool {
+function reject(array $segments, array $words, array $segmentsCrossesMap, array $segmentWordPairs): bool {
     $currSegmentKey = count($segmentWordPairs) - 1;
     $currSegmentCrosses = $segmentsCrossesMap[$currSegmentKey];
     foreach ($currSegmentCrosses as $crossedSegmentKey => $cross) {
         if (isset($segmentWordPairs[$currSegmentKey], $segmentWordPairs[$crossedSegmentKey])) {
             [$o1, $sr1, $sc1] = explode('|', $segments[$currSegmentKey]);
             [$o2, $sr2, $sc2] = explode('|', $segments[$crossedSegmentKey]);
+
             $word1 = $words[$segmentWordPairs[$currSegmentKey]];
             $word2 = $words[$segmentWordPairs[$crossedSegmentKey]];
+
             $letter1 = $o1 === 'v' ? $word1[$cross[0] - $sr1] : $word1[$cross[1] - $sc1];
             $letter2 = $o2 === 'v' ? $word2[$cross[0] - $sr2] : $word2[$cross[1] - $sc2];
 
@@ -161,11 +174,11 @@ echo wordsToString($words) . PHP_EOL . PHP_EOL;
 $segments = extractSegmentsFromTable($table);
 $solution = solve(
     $segments,
-        $words,
-        mapWordLengthsToWords($words),
-        mapSegmentsToCrosses($segments),
-        [],
-        (isset($argv[1]) && $argv[1] === 'display') ? $table : null
+    $words,
+    mapWordLengthsToWords($words),
+    mapSegmentsToCrosses($segments),
+    [],
+    (isset($argv[1]) && $argv[1] === 'display') ? $table : null
 );
 
 displayTable($table, $segments, $words, $solution);
